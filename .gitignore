@@ -3,4 +3,5 @@ venv/
 data/
 __pycache__/
 *.pyc
+*.pbix
 financial_transactions_dashboard.pbix
