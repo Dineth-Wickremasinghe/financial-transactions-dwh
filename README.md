@@ -1,6 +1,6 @@
 # Financial Transactions Dashboard
 
-A data warehousing and business intelligence project built on a synthetic financial transactions dataset. The project covers the full data engineering lifecycle — from raw CSV ingestion through a Python ETL pipeline, into a PostgreSQL star schema data warehouse, and finally visualised in a Power BI dashboard.
+A data warehousing and business intelligence project built on a synthetic financial transactions dataset. The project covers the full data engineering lifecycle  from raw CSV ingestion through a Python ETL pipeline, into a PostgreSQL star schema data warehouse, and finally visualised in a Power BI dashboard.
 
 ---
 
@@ -35,13 +35,15 @@ CSV (6.3M rows)
      │
      ▼
 Python ETL (etl.py)
-  - Extract: read CSV with pandas
-  - Transform: clean, enrich, flag anomalies
-  - Load: batch insert via psycopg2
+  - Extract: read CSV, filter rows newer than high-watermark
+  - Transform: clean, enrich, flag anomalies (Z-score)
+  - Load: batch insert via psycopg2 with ON CONFLICT DO NOTHING
+  - Watermark: update etl_metadata table after successful load
      │
      ▼
 PostgreSQL — staging schema
-  └── staging.raw_transactions
+  ├── staging.raw_transactions
+  └── staging.etl_metadata      # high-watermark tracking
      │
      ▼
 PostgreSQL — warehouse schema (Star Schema)
@@ -126,7 +128,8 @@ Power BI Dashboard
 
 ```
 financial-transactions-dwh/
-├── etl.py                  # Python ETL pipeline
+├── etl.py                  # Python ETL pipeline (incremental load)
+├── run_etl.bat             # Windows batch file for Task Scheduler
 ├── requirements.txt        # Python dependencies
 ├── .gitignore
 ├── .env.example            # Environment variable template
@@ -201,6 +204,13 @@ Run the warehouse SQL scripts in pgAdmin to populate the dimension and fact tabl
 ### 8. Connect Power BI
 Connect Power BI Desktop to your local PostgreSQL instance using the psqlodbc x64 ODBC driver and import the warehouse tables.
 
+### 9. Schedule the ETL (Windows)
+Run `run_etl.bat` manually or set it up in Windows Task Scheduler to run automatically on a daily schedule:
+- Open Task Scheduler → Create Basic Task
+- Set trigger to Daily at your preferred time
+- Set action to Start a Program → browse to `run_etl.bat`
+- The ETL will check the high-watermark and only load new rows each run
+
 ---
 
 ## Dashboard Pages
@@ -222,6 +232,8 @@ Connect Power BI Desktop to your local PostgreSQL instance using the psqlodbc x6
 - **Anomaly detection** — Z-score flagging (transactions > 3 standard deviations from mean)
 - **DAX measures** — Total Spend, MoM Change, Anomaly Rate, Fraud Count
 - **Incremental loading** — high-watermark pattern for efficient pipeline reruns
+- **Idempotent loads** — ON CONFLICT DO NOTHING ensures safe re-runs without duplicates
+- **Pipeline scheduling** — Windows Task Scheduler for automated daily ETL runs
 
 ---
 
@@ -235,7 +247,5 @@ Connect Power BI Desktop to your local PostgreSQL instance using the psqlodbc x6
 ## Author
 
 **Dineth Wickremasinghe**  
-BSc (Hons.) Information Technology — Data Science Specialisation  
-SLIIT · IBM Data Science Professional Certificate
 
 [GitHub](https://github.com/Dineth-Wickremasinghe) · [LinkedIn](https://linkedin.com/in/your-linkedin)
